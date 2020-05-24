@@ -34,15 +34,15 @@ class LoginViewController: UIViewController {
   
   
   override func viewDidLoad() {
-    let rootRef = Database.database().reference()
-    let childRef = Database.database().reference(withPath: "grocery-items")
-    let itemsRef = rootRef.child("grocery-items")
-    let milkRef = itemsRef.child("milk")
-    
-    print(rootRef.key)
-    print(childRef.key)
-    print(itemsRef.key)
-    print(milkRef.key)
+//    let rootRef = Database.database().reference()
+//    let childRef = Database.database().reference(withPath: "grocery-items")
+//    let itemsRef = rootRef.child("grocery-items")
+//    let milkRef = itemsRef.child("milk")
+//    
+//    print(rootRef.key)
+//    print(childRef.key)
+//    print(itemsRef.key)
+//    print(milkRef.key)
   }
   
   // MARK: Actions
@@ -55,13 +55,26 @@ class LoginViewController: UIViewController {
                                   message: "Register",
                                   preferredStyle: .alert)
     
-    let saveAction = UIAlertAction(title: "Save",
-                                   style: .default) { action in
+    let saveAction = UIAlertAction(title: "Save", style: .default) { action in
+      let email = alert.textFields![0].text!
+      let password = alert.textFields![1].text!
+      
+      Auth.auth().createUser(withEmail: email, password: password) { user, error in
+        if error != nil {
+          print(error?.localizedDescription)
+        }
+        
+        if user != nil {
+          user?.user.sendEmailVerification(completion: { (error) in
+            print(error?.localizedDescription)
+          })
+        }
+      }
+                                    
                                     
     }
     
-    let cancelAction = UIAlertAction(title: "Cancel",
-                                     style: .default)
+    let cancelAction = UIAlertAction(title: "Cancel", style: .default)
     
     alert.addTextField { textEmail in
       textEmail.placeholder = "Enter your email"

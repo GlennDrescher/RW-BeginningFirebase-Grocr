@@ -21,6 +21,7 @@
  */
 
 import UIKit
+import Firebase
 
 class GroceryListTableViewController: UITableViewController {
 
@@ -31,6 +32,7 @@ class GroceryListTableViewController: UITableViewController {
   var items: [GroceryItem] = []
   var user: User!
   var userCountBarButtonItem: UIBarButtonItem!
+  let groceryItemsReference = Database.database().reference(withPath: "grocery-item")
   
   // MARK: UIViewController Lifecycle
   
@@ -47,6 +49,51 @@ class GroceryListTableViewController: UITableViewController {
     navigationItem.leftBarButtonItem = userCountBarButtonItem
     
     user = User(uid: "FakeId", email: "hungry@person.food")
+    
+//    groceryItemsReference.observe(.value, with: {snapshot in
+//      print(snapshot)
+//    })
+    
+//    groceryItemsReference.child("pizza").observe(.value) {
+//      snapshot in
+//      if let values = snapshot.value as? [String: AnyObject] {
+//        let name = values["name"] as! String
+//        let addedBy = values["addedByUser"] as! String
+//        let completed = values["completed"] as! Bool
+//        print(values)
+//        print(name)
+//        print(addedBy)
+//        print(completed)
+//      } else {
+//        print("Error typecasting")
+//      }
+//    }
+        
+    // observe value of reference
+    groceryItemsReference.observe(.value) { snapshot in
+      var newItems: [GroceryItem] = []
+    
+        // loop through snapshot children
+      for item in snapshot.children {
+          let groceryItem = GroceryItem(snapshot: item as! DataSnapshot)
+          newItems.append(groceryItem)
+      }
+      self.items = newItems
+      self.tableView.reloadData()
+    }
+    
+    groceryItemsReference.queryOrdered(byChild: "completed").observe(.value, with: {
+      snapshot in
+      var newItems: [GroceryItem] = []
+      for item in snapshot.children {
+        let groceryItem = GroceryItem(snapshot: item as! DataSnapshot)
+        newItems.append(groceryItem)
+        
+      }
+      self.items = newItems
+      self.tableView.reloadData()
+    })
+    
   }
   
   // MARK: UITableView Delegate methods
@@ -73,6 +120,10 @@ class GroceryListTableViewController: UITableViewController {
   
   override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
     if editingStyle == .delete {
+      
+      let groceryItem = items[indexPath.row]
+      groceryItem.ref?.setValue(nil)
+      
       items.remove(at: indexPath.row)
       tableView.reloadData()
     }
@@ -82,9 +133,17 @@ class GroceryListTableViewController: UITableViewController {
     guard let cell = tableView.cellForRow(at: indexPath) else { return }
     var groceryItem = items[indexPath.row]
     let toggledCompletion = !groceryItem.completed
-    
+
     toggleCellCheckbox(cell, isCompleted: toggledCompletion)
     groceryItem.completed = toggledCompletion
+    
+    groceryItem.ref?.updateChildValues(["completed": toggledCompletion])
+    
+//    let values: [String: Any] = ["name" : "Bacon"]
+//    groceryItem.ref?.updateChildValues(values)
+    
+    
+    
     tableView.reloadData()
   }
   
@@ -115,6 +174,13 @@ class GroceryListTableViewController: UITableViewController {
                                     completed: false)
       self.items.append(groceryItem)
       self.tableView.reloadData()
+      
+      let groceryItemRef = self.groceryItemsReference.child(textField.text!.lowercased())
+      let values: [String: Any] = ["name": textField.text!.lowercased(), "addedByUser" : self.user.email, "completed" : false]
+                                    
+      groceryItemRef.setValue(values)
+                                    
+                                    
     }
     
     let cancelAction = UIAlertAction(title: "Cancel",
